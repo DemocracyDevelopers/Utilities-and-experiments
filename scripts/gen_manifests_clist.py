@@ -31,8 +31,13 @@ if __name__ == "__main__":
         for c in contests:
             cid2candidates[c] = []
 
-            pattern = "(Number of positions=1, Number of ranks=[0-9]+)"
-            res = re.search(pattern, c)
+            patternIRV = "(Number of positions=1, Number of ranks=[0-9]+)"
+            patternPL = "(Vote For=[0-9]+)"
+           
+            res = re.search(patternIRV, c)
+            if res == None:
+                res = re.search(patternPL, c)
+
             s,_ = res.span()
             cid2name[c] = c[:s-1].strip()
 
