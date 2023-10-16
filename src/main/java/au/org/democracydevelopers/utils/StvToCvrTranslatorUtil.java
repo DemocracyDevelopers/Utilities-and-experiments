@@ -21,16 +21,18 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * This utility class will take STV file as a command line input and translate it to the Colorado RLA CSV format.
+ * This utility class will take STV file as a command line input and translate it to the Colorado
+ * RLA CSV format.
  */
 public class StvToCvrTranslatorUtil {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   public static void main(String[] args) throws Exception {
-    if(args.length < 2) {
+    if (args.length < 2) {
       System.err.println("Invalid number of arguments. Please use command as following");
-      System.out.println("mvn compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.domain.util.StvToCvrTranslatorUtil\" -Dexec.args=\"sourceFilePath destinationFilePath\"");
+      System.out.println(
+          "mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvToCvrTranslatorUtil\" -Dexec.args=\"sourceFilePath destinationFilePath\"");
       exit(1);
     }
     String sourceFilePath = args[0];
@@ -46,8 +48,7 @@ public class StvToCvrTranslatorUtil {
     System.out.println("Read electionData");
     List<Cvr> cvrs = translateToCvr(electionData);
     System.out.println("Building CSV");
-    buildCsv(cvrs, electionData.getMetadata().getCandidates().stream().map(Candidate::getName)
-        .collect(Collectors.toList()), destinationFilePath);
+    buildCsv(cvrs, electionData, destinationFilePath);
     System.out.println("Successfully Finished building Csv");
   }
 
@@ -124,13 +125,23 @@ public class StvToCvrTranslatorUtil {
 
   }
 
-  private static void buildCsv(List<Cvr> cvrs, List<String> candidates, String destinationFilePath) throws Exception {
-    try (FileWriter fw = new FileWriter(destinationFilePath, true);
+  private static void buildCsv(List<Cvr> cvrs, ElectionData electionData,
+      String destinationFilePath) throws Exception {
+    List<String> candidates = electionData.getMetadata().getCandidates().stream()
+        .map(Candidate::getName)
+        .collect(Collectors.toList());
+    try (FileWriter fw = new FileWriter(destinationFilePath, false);
         BufferedWriter bw = new BufferedWriter(fw);
         PrintWriter out = new PrintWriter(bw)) {
-      String headerRow = "2023 Mayoral General Election, 5.10.11.24";
+      String headerRow = new StringBuilder()
+          .append(electionData.getMetadata().getName().getYear())
+          .append(" ")
+          .append(electionData.getMetadata().getName().getElectorate())
+          .append(" ")
+          .append(electionData.getMetadata().getName().getName())
+          .append(",")
+          .append("5.10.11.24").toString();
       headerRow = headerRow + StringUtils.repeat(",", 5 + candidates.size() * candidates.size());
-
       out.println(headerRow);
       out.println(buildCountyHeader(candidates.size()));
       out.println(buildCandidateHeader(candidates));

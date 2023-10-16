@@ -32,7 +32,10 @@ public class Cvr {
         .append("\"").append(precinctPortion).append("\"").append(",")
         .append("\"").append(ballotType).append("\"").append(",");
     for (int i = 0; i < votes.size(); i++) {
-      builder.append("\"").append(votes.get(i)).append("\"");
+      builder
+//          .append("\"")
+          .append(votes.get(i));
+//          .append("\"");
       if (i < votes.size() - 1) {
         builder.append(",");
       }
