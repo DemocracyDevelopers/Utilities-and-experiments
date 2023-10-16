@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 class BallotInterpretationFunctionExperiments {
 
-    private List<IRVChoices> testVoteList1 = new ArrayList<IRVChoices>();
+    private final List<IRVChoices> testVoteList1 = new ArrayList<IRVChoices>();
 
     BallotInterpretationFunctionExperiments() {
 

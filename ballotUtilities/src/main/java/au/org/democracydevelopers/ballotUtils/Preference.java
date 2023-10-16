@@ -3,8 +3,8 @@ package au.org.democracydevelopers.ballotUtils;
 
 public class Preference implements Comparable<Preference> {
 
-    private Integer rank;
-    private String candidateName;
+    private final Integer rank;
+    private final String candidateName;
 
     public int getRank() {
         return rank;
