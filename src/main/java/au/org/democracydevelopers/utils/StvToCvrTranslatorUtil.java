@@ -143,7 +143,7 @@ public class StvToCvrTranslatorUtil {
           .append("5.10.11.24").toString();
       headerRow = headerRow + StringUtils.repeat(",", 5 + candidates.size() * candidates.size());
       out.println(headerRow);
-      out.println(buildCountyHeader(candidates.size()));
+      out.println(buildCountyHeader(electionData, candidates.size()));
       out.println(buildCandidateHeader(candidates));
       for (Cvr cvr : cvrs) {
         out.println(cvr);
@@ -171,10 +171,13 @@ public class StvToCvrTranslatorUtil {
     return candidateHeadersRow.toString();
   }
 
-  private static String buildCountyHeader(int numberOfCandidates) {
+  private static String buildCountyHeader(ElectionData electionData, int numberOfCandidates) {
     StringBuilder countyHeaderRow = new StringBuilder(StringUtils.repeat(",", 7));
     for (int i = 0; i < numberOfCandidates * numberOfCandidates; i++) {
-      countyHeaderRow.append("\"IRV for Test County (Number of positions=1, Number of ranks=")
+      countyHeaderRow
+          .append("\"")
+          .append(electionData.getMetadata().getName().getElectorate())
+          .append(" (Number of positions=1, Number of ranks=")
           .append(numberOfCandidates).append(")\"");
       if (i < numberOfCandidates * numberOfCandidates - 1) {
         countyHeaderRow.append(",");
