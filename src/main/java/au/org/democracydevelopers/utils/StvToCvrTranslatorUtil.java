@@ -145,6 +145,9 @@ public class StvToCvrTranslatorUtil {
       out.println(headerRow);
       out.println(buildCountyHeader(electionData, candidates.size()));
       out.println(buildCandidateHeader(candidates));
+      String columnHeadingRow = "CvrNumber,TabulatorNum,BatchId,RecordId,ImprintedId,PrecinctPortion,BallotType"
+              +StringUtils.repeat(",",candidates.size() * candidates.size());
+      out.println(columnHeadingRow);
       for (Cvr cvr : cvrs) {
         out.println(cvr);
       }
