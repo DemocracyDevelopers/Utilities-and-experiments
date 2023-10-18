@@ -13,3 +13,7 @@ example 2: fully qualified path from system root
 
 `mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToCvrTranslatorUtil" -Dexec.args="/Users/sandeepbajwa/Documents/democracy/Utilities-and-experiments/src/main/resources/test-data/ballina.json /Users/sandeepbajwa/Documents/democracy/Utilities-and-experiments/src/main/resources/test-data/ballina.csv"
 `
+
+This will also make a ballot manifest file called `destinationFilePath.manifest.csv` describing the cvr file.
+
+In each case, if you have already compiled and you just want to run it again on a new file, you can omit 'compile' and 'clean compile.'

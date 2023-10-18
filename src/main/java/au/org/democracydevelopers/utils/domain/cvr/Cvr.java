@@ -24,13 +24,13 @@ public class Cvr {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("\"").append(cvrNumber).append("\"").append(",")
-        .append("\"").append(tabulatorNum).append("\"").append(",")
-        .append("\"").append(batchId).append("\"").append(",")
-        .append("\"").append(recordId).append("\"").append(",")
-        .append("\"").append(imprintedId).append("\"").append(",")
-        .append("\"").append(precinctPortion).append("\"").append(",")
-        .append("\"").append(ballotType).append("\"").append(",");
+    builder.append(cvrNumber).append(",")
+        .append(tabulatorNum).append(",")
+        .append(batchId).append(",")
+        .append(recordId).append(",")
+        .append(imprintedId).append(",")
+        .append(precinctPortion).append(",")
+        .append(ballotType).append(",");
     for (int i = 0; i < votes.size(); i++) {
       builder
 //          .append("\"")

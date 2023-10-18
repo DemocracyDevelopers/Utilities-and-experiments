@@ -28,6 +28,8 @@ public class StvToCvrTranslatorUtil {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
+  private static final int MAX_RECORD_PER_BATCH = 78;
+
   public static void main(String[] args) throws Exception {
     if (args.length < 2) {
       System.err.println("Invalid number of arguments. Please use command as following");
@@ -50,6 +52,8 @@ public class StvToCvrTranslatorUtil {
     System.out.println("Building CSV");
     buildCsv(cvrs, electionData, destinationFilePath);
     System.out.println("Successfully Finished building Csv");
+    buildManifest(cvrs.size(), "TestCounty", destinationFilePath);
+    System.out.println("Successfully Finished building manifest");
   }
 
   private static List<Cvr> translateToCvr(ElectionData electionData) throws Exception {
@@ -57,7 +61,7 @@ public class StvToCvrTranslatorUtil {
     int numberOfCandidates = candidates.size();
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
     Map<List<Integer>, Integer> buildVoteMap = getCvrBitTranslatedVotesMap(numberOfCandidates,
-        sanitisedMap);
+            sanitisedMap);
     return buildCvrs(buildVoteMap);
   }
 
@@ -97,12 +101,11 @@ public class StvToCvrTranslatorUtil {
     List<Cvr> cvrs = new ArrayList<>();
     int count = 1;
     int batchId = 1;
-    int startRecordId = 1;
-    int maxRecordId = 78;
+    int startRecordId = 0;
     int recordId;
     for (Entry<List<Integer>, Integer> entry : buildVoteMap.entrySet()) {
       for (int i = 0; i < entry.getValue(); i++) {
-        if (startRecordId < maxRecordId) {
+        if (startRecordId < MAX_RECORD_PER_BATCH) {
           recordId = ++startRecordId;
         } else {
           recordId = startRecordId = 1;
@@ -125,6 +128,29 @@ public class StvToCvrTranslatorUtil {
 
   }
 
+  // Make a test manifest file that assumes only one scanner/batch and uses the name "test county", which
+  // doesn't seem to be read.
+  private static void buildManifest(int ballotCount, String countyName, String destinationFilePath) throws Exception {
+    String manifestDestinationFilePath = destinationFilePath+".manifest.csv";
+    try (FileWriter fw = new FileWriter(manifestDestinationFilePath, false);
+         BufferedWriter bw = new BufferedWriter(fw);
+         PrintWriter out = new PrintWriter(bw)) {
+
+      String columnHeadingRow = "CountyID,ScannerID,BatchID,NumBallots,StorageLocation";
+      out.println(columnHeadingRow);
+      int batchID;
+      for ( batchID = 1 ; batchID <= ballotCount / MAX_RECORD_PER_BATCH ; batchID++) {
+        String dataRow = countyName + ",1," + batchID + "," + MAX_RECORD_PER_BATCH + ",Bin 1";
+        out.println(dataRow);
+      }
+      int remainder = ballotCount % MAX_RECORD_PER_BATCH;
+      if (remainder != 0) {
+        String dataRow = countyName + ",1," + batchID + "," + remainder + ",Bin 1";
+        out.println(dataRow);
+      }
+    }
+  }
+
   private static void buildCsv(List<Cvr> cvrs, ElectionData electionData,
       String destinationFilePath) throws Exception {
     List<String> candidates = electionData.getMetadata().getCandidates().stream()
@@ -145,6 +171,9 @@ public class StvToCvrTranslatorUtil {
       out.println(headerRow);
       out.println(buildCountyHeader(electionData, candidates.size()));
       out.println(buildCandidateHeader(candidates));
+      String columnHeadingRow = "CvrNumber,TabulatorNum,BatchId,RecordId,ImprintedId,PrecinctPortion,BallotType"
+              +StringUtils.repeat(",",candidates.size() * candidates.size());
+      out.println(columnHeadingRow);
       for (Cvr cvr : cvrs) {
         out.println(cvr);
       }
