@@ -72,7 +72,8 @@ public class StvToCvrTranslatorUtil {
       List<Integer> preferenceBitList = new ArrayList<>(numberOfCandidates * numberOfCandidates);
       initialize(preferenceBitList, numberOfCandidates);
       for (int i = 0; i < entry.getKey().size(); i++) {
-        preferenceBitList.set(entry.getKey().get(i) * numberOfCandidates + i, 1);
+        // if candidate c is at index i, this tells us to put a 1 in the c'th column of the i-th preference group
+        preferenceBitList.set(i * numberOfCandidates + entry.getKey().get(i), 1);
       }
       buildVoteMap.put(preferenceBitList, entry.getValue());
     }

@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "name": {
+      "year": "2021",
+      "authority": "NSW Electoral Commission",
+      "name": "NSW Local Government",
+      "electorate": "Bellingen Mayoral"
+    },
+    "candidates": [
+      {
+        "name": "ALLAN Steve",
+        "position": 1
+      },
+      {
+        "name": "WOODWARD Andrew",
+        "position": 2
+      },
+      {
+        "name": "KING Dominic",
+        "position": 3
+      }
+    ],
+    "results": [
+      0
+    ],
+    "vacancies": 1,
+    "enrolment": 10286
+  },
+  "atl": [],
+  "btl": [
+    {
+      "candidates": [
+        0
+      ],
+      "n": 1
+    },
+    {
+      "candidates": [
+        2
+      ],
+      "n": 1
+    },
+    {
+      "candidates": [
+        1
+      ],
+      "n": 1
+    }
+  ],
+  "btl_types": [
+    {
+      "vote_type": "PR",
+      "first_index_inclusive": 0,
+      "last_index_exclusive": 15
+    },
+    {
+      "vote_type": "Postal",
+      "first_index_inclusive": 15,
+      "last_index_exclusive": 30
+    },
+    {
+      "vote_type": "Enrolment/NAMAV",
+      "first_index_inclusive": 30,
+      "last_index_exclusive": 45
+    },
+    {
+      "vote_type": "PP",
+      "first_index_inclusive": 45,
+      "last_index_exclusive": 60
+    },
+    {
+      "vote_type": "iVote",
+      "first_index_inclusive": 60,
+      "last_index_exclusive": 74
+    }
+  ],
+  "informal": 235
+}
