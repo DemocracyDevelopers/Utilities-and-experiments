@@ -14,6 +14,16 @@ example 2: fully qualified path from system root
 `mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToCvrTranslatorUtil" -Dexec.args="/Users/sandeepbajwa/Documents/democracy/Utilities-and-experiments/src/main/resources/test-data/ballina.json /Users/sandeepbajwa/Documents/democracy/Utilities-and-experiments/src/main/resources/test-data/ballina.csv"
 `
 
-This will also make a ballot manifest file called `destinationFilePath.manifest.csv` describing the cvr file.
+This will also make  
+ - a ballot manifest file called `destinationFilePath.manifest.csv` describing the cvr file.
+ - a file called `destinationFilePath-raire-service.json` for the raire-service, in which each vote is a list of candidate names.
+
+Optionally, you can add a third (integer) argument, which the time allowed to the raire-service to compute the assertions. 
 
 In each case, if you have already compiled and you just want to run it again on a new file, you can omit 'compile' and 'clean compile.'
+
+## Scripts for multiple runs
+The scripts folder contains two simple scripts designed to produce a suite of test data for colorado-rla
+
+- `computeallCSVHash.sh` runs the StvToCVRAndRAIREService translator on all the .json in the directory
+- `computeallCSVHash.sh` computes the SHA256 hash of every .csv file in the directory. This is useful for colorado-rla uploads.
