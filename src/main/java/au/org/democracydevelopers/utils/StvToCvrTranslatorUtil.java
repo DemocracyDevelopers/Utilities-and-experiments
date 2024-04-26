@@ -6,7 +6,6 @@ import static java.lang.System.exit;
 
 import au.org.democracydevelopers.utils.domain.cvr.Cvr;
 import au.org.democracydevelopers.utils.domain.raireservice.ContestRequest;
-import au.org.democracydevelopers.utils.domain.stv.Btl;
 import au.org.democracydevelopers.utils.domain.stv.Candidate;
 import au.org.democracydevelopers.utils.domain.stv.ElectionData;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,7 +70,7 @@ public class StvToCvrTranslatorUtil {
   }
 
 
-  private static List<Cvr> translateToCvr(ElectionData electionData) throws Exception {
+  private static List<Cvr> translateToCvr(ElectionData electionData) {
     List<Candidate> candidates = electionData.getMetadata().getCandidates();
     int numberOfCandidates = candidates.size();
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
@@ -222,11 +221,5 @@ public class StvToCvrTranslatorUtil {
       }
     }
     return countyHeaderRow.toString();
-  }
-
-  private static void initialize(List<Integer> preferenceBitList, int numberOfCandidates) {
-    for (int i = 0; i < numberOfCandidates * numberOfCandidates; i++) {
-      preferenceBitList.add(0);
-    }
   }
 }

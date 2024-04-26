@@ -1,11 +1,8 @@
 package au.org.democracydevelopers.utils;
 
-import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getCvrBitTranslatedVotesMap;
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getSanitisedVotesCount;
 import static java.lang.System.exit;
 
-import au.org.democracydevelopers.utils.domain.cvr.Cvr;
-import au.org.democracydevelopers.utils.domain.raireservice.ContestRequest;
 import au.org.democracydevelopers.utils.domain.stv.Candidate;
 import au.org.democracydevelopers.utils.domain.stv.ElectionData;
 import au.org.democracydevelopers.utils.domain.stv.Metadata;
@@ -14,13 +11,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * This utility class will take an STV file as a command line input and translate it to a series of SQL
@@ -33,7 +26,6 @@ import org.apache.commons.lang3.StringUtils;
  *     0, null, 0, null, null, null, 'cvr:1:1-1-1');
  * INSERT INTO public.cvr_contest_info (cvr_id, county_id, choices, comment, consensus, contest_id, index, version)
  *     VALUES (3829000, 1, '["MCCARTHY Steve","JOHNSON Jeff","WILLIAMS Keith"]', null, null, 3828998, 0, null);
- *
  * In colorado-rla, each CVR can have multiple contests, and there should be one cvr_contest_info for each.
  * Currently, this utility assumes only one contest per CVR, so the 'index' for every cvr_contest_info is zero.
  *
@@ -71,11 +63,11 @@ public class StvToSqlTranslatorUtil {
 
     String sourceFilePath = args[0];
     String destinationFilePath = args[1];
-    translateContest(sourceFilePath, destinationFilePath, time);
+    translateContest(sourceFilePath, destinationFilePath);
     System.out.println("translated CVR File is generated at: " + destinationFilePath);
   }
 
-  public static void translateContest(String sourceFilePath, String destinationFilePath, int timeAllowed) throws Exception {
+  public static void translateContest(String sourceFilePath, String destinationFilePath) throws Exception {
     ElectionData electionData = objectMapper.readValue(
         new File(sourceFilePath),
         ElectionData.class);
@@ -87,9 +79,7 @@ public class StvToSqlTranslatorUtil {
       throw  new RuntimeException("Too many votes");
     }
 
-    int numberOfCandidates = candidates.size();
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
-    // Map<List<Integer>, Integer> buildVoteMap = getCvrBitTranslatedVotesMap(numberOfCandidates, sanitisedMap);
 
     System.out.println("Building SQL");
     try (FileWriter fw = new FileWriter(destinationFilePath, false);
