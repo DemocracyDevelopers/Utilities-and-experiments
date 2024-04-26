@@ -1,5 +1,7 @@
 package au.org.democracydevelopers.utils;
 
+import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getCvrBitTranslatedVotesMap;
+import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getSanitisedVotesCount;
 import static java.lang.System.exit;
 
 import au.org.democracydevelopers.utils.domain.cvr.Cvr;
@@ -75,37 +77,6 @@ public class StvToCvrTranslatorUtil {
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
     Map<List<Integer>, Integer> buildVoteMap = getCvrBitTranslatedVotesMap(numberOfCandidates, sanitisedMap);
     return buildCvrs(buildVoteMap);
-  }
-
-  private static Map<List<Integer>, Integer> getCvrBitTranslatedVotesMap(int numberOfCandidates,
-      Map<List<Integer>, Integer> sanitisedMap) {
-    Map<List<Integer>, Integer> buildVoteMap = new LinkedHashMap<>();
-    for (Entry<List<Integer>, Integer> entry : sanitisedMap.entrySet()) {
-      List<Integer> preferenceBitList = new ArrayList<>(numberOfCandidates * numberOfCandidates);
-      initialize(preferenceBitList, numberOfCandidates);
-      for (int i = 0; i < entry.getKey().size(); i++) {
-        // if candidate c is at index i, this tells us to put a 1 in the c'th column of the i-th preference group
-        preferenceBitList.set(i * numberOfCandidates + entry.getKey().get(i), 1);
-      }
-      buildVoteMap.put(preferenceBitList, entry.getValue());
-    }
-    return buildVoteMap;
-  }
-
-  private static Map<List<Integer>, Integer> getSanitisedVotesCount(ElectionData electionData) {
-    Map<List<Integer>, Integer> sanitisedMap = new HashMap<>();
-    int totalVotes = 0;
-    for (Btl entry : electionData.getBtl()) {
-      totalVotes += entry.getCount();
-      if (sanitisedMap.containsKey(entry.getPreferences())) {
-        sanitisedMap.put(entry.getPreferences(),
-            sanitisedMap.get(entry.getPreferences()) + entry.getCount());
-      } else {
-        sanitisedMap.put(entry.getPreferences(), entry.getCount());
-      }
-    }
-    System.out.println("Total Number of Votes: " + totalVotes);
-    return sanitisedMap;
   }
 
   private static List<Cvr> buildCvrs(Map<List<Integer>, Integer> buildVoteMap) {

@@ -1,13 +1,14 @@
 # Utilities-and-experiments
 Useful utils and random experiments peripherally related to colorado-rla but not intended to be part of the final code.
 
+## Producing Colorado-rla CSV data
 To Convert an STV file as input and translate to CVR format expected by colorado-rla please use the following command
 
 `mvn compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToCvrTranslatorUtil" -Dexec.args="sourceFilePath destinationFilePath"`
 
-example 1: resource path from current directory
+example 1: resource path from project root directory
 
-`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToCvrTranslatorUtil" -Dexec.args="src/main/resources/test-data/Bellingen.json src/main/resources/test-data/Bellingen.csv"`
+`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToCvrTranslatorUtil" -Dexec.args="src/main/resources/test-data/Bellingen_Mayoral.json src/main/resources/test-data/Bellingen_Mayoral.csv"`
 
 example 2: fully qualified path from system root
 
@@ -22,8 +23,17 @@ Optionally, you can add a third (integer) argument, which the time allowed to th
 
 In each case, if you have already compiled and you just want to run it again on a new file, you can omit 'compile' and 'clean compile.'
 
-## Scripts for multiple runs
+### Scripts for multiple runs
 The scripts folder contains two simple scripts designed to produce a suite of test data for colorado-rla
 
 - `computeallCSVHash.sh` runs the StvToCVRAndRAIREService translator on all the .json in the directory
 - `computeallCSVHash.sh` computes the SHA256 hash of every .csv file in the directory. This is useful for colorado-rla uploads.
+
+## Producing sql files for loading automatically into the corla database
+To Convert an STV file (something.json) as input and translate to SQL format expected by corla please use the following command
+
+`mvn compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args="sourceFilePath destinationFilePath"`
+
+example 1: resource path from project root directory
+
+`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args="src/main/resources/test-data/Bellingen_Mayoral.json src/main/resources/test-data/Bellingen_Mayoral.sql"`
