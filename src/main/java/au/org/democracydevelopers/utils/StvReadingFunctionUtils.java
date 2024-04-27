@@ -22,12 +22,18 @@ package au.org.democracydevelopers.utils;
 
 import au.org.democracydevelopers.utils.domain.stv.Btl;
 import au.org.democracydevelopers.utils.domain.stv.ElectionData;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 public class StvReadingFunctionUtils {
 
@@ -66,5 +72,16 @@ public class StvReadingFunctionUtils {
     for (int i = 0; i < numberOfCandidates * numberOfCandidates; i++) {
       preferenceBitList.add(0);
     }
+  }
+
+  // Copied from https://www.baeldung.com/java-recursive-search-directory-extension-match
+  public static Iterator<File> findFiles(Path startPath, String extension) {
+    if (!extension.startsWith(".")) {
+      extension = "." + extension;
+    }
+    return FileUtils.iterateFiles(
+        startPath.toFile(),
+        WildcardFileFilter.builder().setWildcards("*" + extension).get(),
+        TrueFileFilter.INSTANCE);
   }
 }

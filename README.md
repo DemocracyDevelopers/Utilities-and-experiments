@@ -30,10 +30,22 @@ The scripts folder contains two simple scripts designed to produce a suite of te
 - `computeallCSVHash.sh` computes the SHA256 hash of every .csv file in the directory. This is useful for colorado-rla uploads.
 
 ## Producing sql files for loading automatically into the corla database
-To Convert an STV file (something.json) as input and translate to SQL format expected by corla please use the following command
+To Convert an STV file (something.json) as input and translate to SQL format expected by corla you can use the following command
+for a single file (stating the source and destination file names)
 
 `mvn compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args="sourceFilePath destinationFilePath"`
 
 example 1: resource path from project root directory
 
-`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args="src/main/resources/test-data/Bellingen_Mayoral.json src/main/resources/test-data/Bellingen_Mayoral.sql"`
+`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args=" 'Test comment' src/main/resources/test-data/Bellingen_Mayoral.json src/main/resources/test-data/Bellingen_Mayoral.sql"`
+
+or the following to list an entire directory.
+`mvn compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args="comment sourceFileDirectory"`
+
+example 1: resource path from project root directory
+
+`mvn clean compile exec:java -Dexec.mainClass="au.org.democracydevelopers.utils.StvToSqlTranslatorUtil" -Dexec.args=" 'Test comment' src/main/resources/test-data/"`
+
+Either way, the comment will be prepended to all the .sql files. This is useful for source/copyright notices.
+
+

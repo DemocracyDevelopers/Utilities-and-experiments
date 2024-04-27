@@ -16,4 +16,8 @@ public class ElectionData {
   @JsonProperty("btl_types")
   private List<BtlType> btlTypes;
   private int informal;
+
+  public int countBallots() {
+    return btl.stream().mapToInt(Btl::getCount).sum();
+  }
 }
