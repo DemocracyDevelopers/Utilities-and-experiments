@@ -84,4 +84,10 @@ public class StvReadingFunctionUtils {
         WildcardFileFilter.builder().setWildcards("*" + extension).get(),
         TrueFileFilter.INSTANCE);
   }
+
+  // For escaping the single quotes in names like O'Brien, which otherwise confuse the sql reader.
+  public static String escapeChars(String in) {
+    // Escape once for Java, once for regexp.
+      return in.replaceAll("'", "''");
+  }
 }

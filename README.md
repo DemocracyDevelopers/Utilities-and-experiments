@@ -48,4 +48,9 @@ example 1: resource path from project root directory
 
 Either way, the comment will be prepended to all the .sql files. This is useful for source/copyright notices.
 
+The test data in [raire-service](https://github.com/DemocracyDevelopers/raire-service)'s NSW2021Data
+was generated using the 2-argument version, with the NSW CC copyright message and the complete set of NSW 2021 .stv (.json) data.
+
+
+
 

@@ -1,5 +1,6 @@
 package au.org.democracydevelopers.utils;
 
+import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.escapeChars;
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.findFiles;
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getSanitisedVotesCount;
 import static java.lang.System.exit;
@@ -13,7 +14,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -34,26 +34,26 @@ import org.apache.commons.io.FilenameUtils;
  *     VALUES (3829000, 1, '["MCCARTHY Steve","JOHNSON Jeff","WILLIAMS Keith"]', null, null, 3828998, 0, null);
  * In colorado-rla, each CVR can have multiple contests, and there should be one cvr_contest_info for each.
  * Currently, this utility assumes only one contest per CVR, so the 'index' for every cvr_contest_info is zero.
- * There are two modes:
+ * There are two modes. In either case, the first argument is a comment.
  * If both an input and output file are specified on the command line, a single output file is created (for a single contest)
  * If one input is specified on the command line, it is taken to be a directory. We iterate over all
  * the .json files in the directory, translating them into SQL, with an incrementing county-and-contest ID.
  * This ensures that all the sql files produced can be read into a database without ID clashes, assuming that
  * the number of votes per contest does not exceed MAX_VOTES_PER_ELECTION.
- *
+ * Note there is NO EFFORT AT PROPER SQL ESCAPING so please don't use this for anything other than
+ * generating test data from trustworthy sources.
  */
 public class StvToSqlTranslatorUtil {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   private static final int MAX_RECORD_PER_BATCH = 78;
-  private static final int DEFAULT_TIME_ALLOWED = 10;
 
   // Used to pad the right number of zeros after the contest value in ID. If this assumption is
   // wrong, IDs may not be unique.
   // 7 digits are sufficient for vote IDs assuming there are no more than a million per contest.
   // If you change this, you have to change the string formatting (%07d) in buildSQLValues.
-  private static int MAX_VOTES_PER_ELECTION = 1000000;
+  private static final int MAX_VOTES_PER_ELECTION = 1000000;
 
   private static final String usage = "Usage: mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvTosqlTranslatorUtil\" -Dexec.args=\"commentForFiles sourceFile.json destinationFile \"\n"+
    "Alternative arguments for whole-directory run: -Dexec.args=\"commentForFiles sourceDirectory \"";
@@ -122,7 +122,6 @@ public class StvToSqlTranslatorUtil {
     }
 
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
-    int ballotCount=0;
 
     System.out.println("Building SQL");
     try (FileWriter fw = new FileWriter(destinationFilePath, false);
@@ -158,6 +157,9 @@ public class StvToSqlTranslatorUtil {
         String cvrID = countyandContestID+String.format("%07d",count);
         String imprintedID = "1-"+batchId+'-'+recordId;      // Imprinted ID: scanner_id - batch_id - record_id. ScannerID can always be 1.
 
+
+        // Note there is NO EFFORT AT PROPER SQL ESCAPING - this is just a scratch file for test data
+        // generation from trustworthy sources.
         String castVoteRecordValue =
             "INSERT INTO public.cast_vote_record (id, audit_board_index, comment, cvr_id, ballot_type, "+
             "batch_id, county_id, cvr_number, imprinted_id, record_id, record_type, scanner_id, "+
@@ -184,7 +186,7 @@ public class StvToSqlTranslatorUtil {
             // "index, version) VALUES ("+
             cvrID +','+
             countyandContestID+','+ // county ID.
-            "'[\""+String.join("\",\"",choices)+"\"]',"+ // The votes as a string.
+            "'[\""+String.join("\",\"",choices.stream().map(StvReadingFunctionUtils::escapeChars).toList())+"\"]',"+ // The votes as a string.
             countyandContestID+','+ // contest ID.
             "0);"; // Index zero, because all our cvrs have only one contest.
         out.println(cvrContestInfoValue);
@@ -199,7 +201,7 @@ public class StvToSqlTranslatorUtil {
     out.println("-- Test data for "+electionMetadata.getName().getElectorate());
     out.println();
     out.println(
-        "INSERT INTO county (id, name) VALUES ("+i+",'"+electionMetadata.getName().getElectorate()+" County');"
+        "INSERT INTO county (id, name) VALUES ("+i+",'"+escapeChars(electionMetadata.getName().getElectorate())+" County');"
     );
     out.println(
       "INSERT INTO contest (county_id, id, version, description, name, sequence_number, votes_allowed, winners_allowed) VALUES ("+
@@ -207,7 +209,7 @@ public class StvToSqlTranslatorUtil {
       i+','+ // ContestID.
       "0,"+ // Version.
       "'IRV',"+ // vote type. Always IRV for these test cases.
-      "'"+electionMetadata.getName().getElectorate()+"',"+ // Contest name - for these tests, always the file name.
+      "'"+escapeChars(electionMetadata.getName().getElectorate())+"',"+ // Contest name - for these tests, always the file name.
       i+','+ // Sequence number. For these tests, same as contest and county IDs, though this is not true in general.
       electionMetadata.getCandidates().size()+','+ // Votes allowed - one preference for each candidate.
       "1);" // Winners allowed - always 1.
@@ -223,8 +225,8 @@ public class StvToSqlTranslatorUtil {
 
     out.println("// Contest "+electionData.getMetadata().getName().getElectorate());
     out.println("private static final String nameContest_"+contestID+" = \""+electionData.getMetadata().getName().getElectorate()+"\";");
-    out.println("private static final List<String> choicesContest_"+contestID+" = List.of(\""+ electionData.getMetadata().getCandidates().stream().map(
-        Candidate::getName).collect(Collectors.joining("\",\""))+"\");");
+    out.println("private static final List<String> choicesContest_"+contestID+" = List.of(\""+
+        electionData.getMetadata().getCandidates().stream().map(Candidate::getName).collect(Collectors.joining("\",\""))+"\");");
     int ballotCount  = electionData.countBallots();
     out.println("private static final int ballotCountContest_"+contestID+" = "+ballotCount+";");
     out.println("private static final double difficultyContest_"+contestID+" = 0; // TODO - get correct value.");
