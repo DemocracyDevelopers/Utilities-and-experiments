@@ -225,6 +225,7 @@ public class StvToSqlTranslatorUtil {
     out.println("-- "+comment);
     out.println("--");
   }
+
   private static void writeMetadataRow(PrintWriter out, int contestID, ElectionData electionData) {
 
     out.println("// Contest "+electionData.getMetadata().getName().getElectorate());
