@@ -4,6 +4,7 @@ import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.escapeCha
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.findFiles;
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getSanitisedVotesCount;
 import static java.lang.System.exit;
+import static java.lang.System.out;
 
 import au.org.democracydevelopers.utils.domain.stv.Candidate;
 import au.org.democracydevelopers.utils.domain.stv.ElectionData;
@@ -57,7 +58,21 @@ public class StvToSqlTranslatorUtil {
 
   private static final String usage = "Usage: mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvTosqlTranslatorUtil\" -Dexec.args=\"commentForFiles sourceFile.json destinationFile \"\n"+
    "Alternative arguments for whole-directory run: -Dexec.args=\"commentForFiles sourceDirectory \"";
+
+  private final static String CAST_VOTE_RECORD_INSERT =
+      "INSERT INTO cast_vote_record (id, audit_board_index, comment, cvr_id, ballot_type, "+
+        "batch_id, county_id, cvr_number, imprinted_id, record_id, record_type, scanner_id, "+
+        "sequence_number, timestamp, version, rand, revision, round_number, uri) VALUES";
+
+  private final static String CVR_CONTEST_INFO_INSERT =
+      "INSERT INTO cvr_contest_info (cvr_id, county_id, choices, contest_id, index) VALUES";
+
+  private final static boolean DO_BULK = true;
+
   public static void main(String[] args) throws Exception {
+    // TODO: make this a commandline parameter.
+    boolean doBulk = DO_BULK;
+
     if (args.length < 2 || args.length > 3) {
       System.err.println("Invalid number of arguments. Please use command as following");
       System.out.println(usage);
@@ -70,7 +85,7 @@ public class StvToSqlTranslatorUtil {
     if(args.length == 3) {
       String sourceFilePath = args[1];
       String destinationFilePath = args[2];
-      translateContest(1, comment, new File(sourceFilePath), destinationFilePath);
+      translateContest(1, comment, new File(sourceFilePath), destinationFilePath, doBulk);
       System.out.println("translated CVR File is generated at: " + destinationFilePath);
     }
 
@@ -78,12 +93,12 @@ public class StvToSqlTranslatorUtil {
     // Also need to make a metadata file.
     if (args.length == 2) {
       String dataPath = args[1];
-      translateAllContests(dataPath, comment);
+      translateAllContests(dataPath, comment, doBulk);
       System.out.println("translated CVR Files and metadata are generated at: " + dataPath);
     }
   }
 
-  public static void translateAllContests(String dataPath, String comment) {
+  public static void translateAllContests(String dataPath, String comment, boolean doBulk) {
     ElectionData electionData;
 
     Iterator<File> sourceFiles = findFiles(Paths.get(dataPath), ".json");
@@ -97,7 +112,7 @@ public class StvToSqlTranslatorUtil {
       while (sourceFiles.hasNext()) {
         File sourceFile = sourceFiles.next();
         electionData = translateContest(contestID, comment, sourceFile,
-            FilenameUtils.removeExtension(sourceFile.toString()) + ".sql");
+            FilenameUtils.removeExtension(sourceFile.toString()), doBulk);
         writeMetadataRow(metadataOut, contestID, electionData);
         contestID++;
       }
@@ -110,7 +125,7 @@ public class StvToSqlTranslatorUtil {
 
 
   public static ElectionData translateContest(int countyAndContestID, String comment, File sourceFilePath,
-      String destinationFilePath) throws Exception {
+      String destinationFilePath, boolean doBulk) throws Exception {
     ElectionData electionData = objectMapper.readValue(
         sourceFilePath,
         ElectionData.class);
@@ -124,29 +139,60 @@ public class StvToSqlTranslatorUtil {
     Map<List<Integer>, Integer> sanitisedMap = getSanitisedVotesCount(electionData);
 
     System.out.println("Building SQL");
-    try (FileWriter fw = new FileWriter(destinationFilePath, false);
+    // If we're not doing bulk, this file will be used to store all the data
+    try (FileWriter fw = new FileWriter(destinationFilePath+".sql", false);
         BufferedWriter bw = new BufferedWriter(fw);
-        PrintWriter out = new PrintWriter(bw)) {
+        PrintWriter out = new PrintWriter(bw);
+
+        FileWriter fw_cvr_contest_info = new FileWriter(destinationFilePath + "_cvr_contest_info.sql", false);
+        BufferedWriter bw_cvr_contest_info = new BufferedWriter(fw_cvr_contest_info);
+        PrintWriter out_cvr_contest_info = new PrintWriter(bw_cvr_contest_info)) {
+
       writeComment(out, comment);
+      if(doBulk) {
+        writeComment(out_cvr_contest_info, comment);
+      }
       writeSQLCountyAndContestInfo(out, countyAndContestID, electionData.getMetadata());
-      writeSQLValues(out, countyAndContestID, electionData.getMetadata().getCandidates(), sanitisedMap);
+      writeSQLValues(out, out_cvr_contest_info, countyAndContestID, electionData.getMetadata().getCandidates(), sanitisedMap, doBulk);
+
+      out_cvr_contest_info.close();
+      out.close();
     }
+
+
     System.out.println("Successfully Finished building SQL");
     return electionData;
   }
 
-  private static void writeSQLValues(PrintWriter out, int countyandContestID, List<Candidate> candidates, Map<List<Integer>, Integer> buildVoteMap) {
-    System.out.println("Building SQL values");
+  private static void writeSQLValues(PrintWriter out, PrintWriter out_cvr_contest_info, int countyandContestID, List<Candidate> candidates, Map<List<Integer>, Integer> buildVoteMap, boolean doBulk) {
+    System.out.println("Building SQL values for contest number "+countyandContestID);
+
     int count = 1; // Total count, including possible multiple instances of same choices.
     int batchId = 1;
     int startRecordId = 0;
     int recordId;
-    for (Entry<List<Integer>, Integer> entry : buildVoteMap.entrySet()) {
+
+    // If we're doing bulk insert we need to print the insert statement at the start
+    if(doBulk) {
+      out.println(CAST_VOTE_RECORD_INSERT);
+      out_cvr_contest_info.println(CVR_CONTEST_INFO_INSERT);
+    }
+
+    // Iterate over all the different vote types (i.e. choices)
+    var iterator = buildVoteMap.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<List<Integer>, Integer> entry = iterator.next();
+
+      // We need to keep track of the very last vote so we can put a semicolon rather than a comma
+      // at the end of the file.
+      boolean isLastChoicesType = !iterator.hasNext();
 
       // Translate the choices (integers) into a list of strings
       List<String> choices = entry.getKey().stream().map(c -> candidates.get(c).getName()).toList();
 
+      // Print out a line for each vote - each line has the same choices but different IDs.
       for (int i = 0; i < entry.getValue(); i++) {
+        boolean isLast = isLastChoicesType && (i == entry.getValue() - 1);  // This is the last vote if it's the last instance of the last kind.
         if (startRecordId < MAX_RECORD_PER_BATCH) {
           recordId = ++startRecordId;
         } else {
@@ -161,10 +207,10 @@ public class StvToSqlTranslatorUtil {
         // Note there is NO EFFORT AT PROPER SQL ESCAPING - this is just a scratch file for test data
         // generation from trustworthy sources.
         String castVoteRecordValue =
-            "INSERT INTO public.cast_vote_record (id, audit_board_index, comment, cvr_id, ballot_type, "+
-            "batch_id, county_id, cvr_number, imprinted_id, record_id, record_type, scanner_id, "+
-            "sequence_number, timestamp, version, rand, revision, round_number, uri) VALUES ("+
-            cvrID +','+
+            // If we're not doing bulk insert, we need to print the insert statement every time
+            (doBulk ? "" : CAST_VOTE_RECORD_INSERT) +
+            // Write out the data
+            "(" + cvrID +','+
             "null, null, null,"+
             "'Type 1',"+ // Ballot type, ignored for now.
             "'" +batchId+ "'," + // BatchId seems to be stored as a string.
@@ -176,22 +222,37 @@ public class StvToSqlTranslatorUtil {
             "1,"+ // Scanner ID. Always 1.
             count+','+ // Sequence number. No need to be unique between counties.
             "null, 0, null, null, null,"+ // More data we don't care about: timestamp, version, rand, revision, round number.
-            "'cvr:1:"+imprintedID+"');"; // Not sure what this uri is, but it seems to be basically the imprinted ID and some extra text.
+            "'cvr:1:"+imprintedID+"')" + // Not sure what this uri is, but it seems to be basically the imprinted ID and some extra text.
+            ( (doBulk && !isLast) ? "," : ";"); // If we're doing bulk inserts, the separate lines should be separated by a comma,
+                                                // unless it's the last vote, in which case it gets a semicolon.
+                                                // If not bulk, they're separate statements and all need a semicolon.
         out.println(castVoteRecordValue);
 
         // Note there is NO EFFORT AT PROPER SQL ESCAPING - this is just a scratch file for test data
         // generation from trustworthy sources.
         String cvrContestInfoValue =
-            "INSERT INTO public.cvr_contest_info (cvr_id, county_id, choices, contest_id, index) VALUES ("+
+            // If we're not doing bulk insert, we need to print the insert statement every time
+            (doBulk ? "" : CVR_CONTEST_INFO_INSERT) +
+            // Write out the data
             // Note the record generated by colorado-rla has other values, which we ignore for these tests:
             // "INSERT INTO public.cvr_contest_info (cvr_id, county_id, choices, comment, consensus, contest_id, "+
             // "index, version) VALUES ("+
-            cvrID +','+
+            "( " + cvrID +','+
             countyandContestID+','+ // county ID.
             "'[\""+String.join("\",\"",choices.stream().map(StvReadingFunctionUtils::escapeChars).toList())+"\"]',"+ // The votes as a string.
             countyandContestID+','+ // contest ID.
-            "0);"; // Index zero, because all our cvrs have only one contest.
-        out.println(cvrContestInfoValue);
+            "0)"; // Index zero, because all our cvrs have only one contest.
+
+        // If we're not doing bulk insert, we just print the cvrContestInfo into the same file as the
+        // Cast_vote_record value. If we are doing bulk insert, they go into separate files.
+        // If we're doing bulk inserts, the separate lines should be separated by a comma,
+        // unless it's the last vote, in which case it gets a semicolon.
+        // If not bulk, they're separate statements and all need a semicolon.
+        if(doBulk) {
+          out_cvr_contest_info.println(cvrContestInfoValue + (isLast ? ";" : ",") );
+        } else {
+          out.println(cvrContestInfoValue + ";");
+        }
 
         count++;
       }
