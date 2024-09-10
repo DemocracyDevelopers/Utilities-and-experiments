@@ -19,16 +19,20 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * This utility class will take STV file as a command line input and translate it to the Colorado
+ * This utility class will take an STV file as a command line input and translate it to the Colorado
  * RLA CSV format.
+ * You can get the .stv files from vote.andrewconway.org. Change the file suffix from .stv to .json.
+ * You can also split the file by adding a 3rd parameter with the number of requested partitions. For example, the data
+ * used for the main demo was generated with command line parameters
+ * "src/main/resources/test-data/Byron_Mayoral.json" "src/main/resources/test-data/split-Byron/Byron" 64
+ * An optional parameter tells it how many files to split it into - default is 1.
  */
 public class StvToCvrTranslatorUtil {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   private static final int MAX_RECORD_PER_BATCH = 78;
-  private static final int DEFAULT_TIME_ALLOWED = 10;
-  private static final String usage = "Usage: mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvToCvrTranslatorUtil\" -Dexec.args=\"sourceFile.json destinationFile [Optional] timeAllowed\"";
+  private static final String usage = "Usage: mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvToCvrTranslatorUtil\" -Dexec.args=\"sourceFile.json destinationFile [Optional] split\"";
   public static void main(String[] args) throws Exception {
     if (args.length < 2) {
       System.err.println("Invalid number of arguments. Please use command as following");
@@ -36,10 +40,12 @@ public class StvToCvrTranslatorUtil {
       exit(1);
     }
 
-    int time = DEFAULT_TIME_ALLOWED;
+    // Default if no split is specified is to put them all in one file.
+    int split = 1;
+
     if (args.length == 3) {
       try {
-        time = Integer.parseInt(args[2]);
+        split = Integer.parseInt(args[2]);
       } catch (Exception e) {
         System.err.println("Invalid time allowed. Please use command as following");
         System.out.println(usage);
@@ -48,25 +54,30 @@ public class StvToCvrTranslatorUtil {
 
     String sourceFilePath = args[0];
     String destinationFilePath = args[1];
-    translate(sourceFilePath, destinationFilePath, time);
+    translate(sourceFilePath, destinationFilePath, split);
     System.out.println("translated CVR File is generated at: " + destinationFilePath);
   }
 
-  public static void translate(String sourceFilePath, String destinationFilePath, int timeAllowed) throws Exception {
-    ElectionData electionData = objectMapper.readValue(
+  public static void translate(String sourceFilePath, String destinationFilePath, int split) throws Exception {
+    ElectionData rawElectionData = objectMapper.readValue(
         new File(sourceFilePath),
         ElectionData.class);
     System.out.println("Read electionData");
-    List<Cvr> cvrs = translateToCvr(electionData);
-    System.out.println("Building CSV");
-    buildCsv(cvrs, electionData, destinationFilePath+".csv");
-    System.out.println("Successfully Finished building Csv");
-    buildManifest(cvrs.size(), "TestCounty", destinationFilePath+"-manifest.csv");
-    System.out.println("Successfully Finished building manifest");
+    List<ElectionData> splitElectionData = rawElectionData.split(split);
+    for (int i = 0; i < splitElectionData.size(); i++) {
+      ElectionData electionData = splitElectionData.get(i);
 
-    System.out.println("Building .json for RAIRE service");
-    writeJsonForRaireService(timeAllowed, cvrs, electionData, destinationFilePath+"-raire-service.json");
-    System.out.println("Successfully Finished building json for RAIRE service.");
+    List<Cvr> cvrs = translateToCvr(electionData);
+    System.out.printf("Building CSV %d\n", i+1);
+    buildCsv(cvrs, electionData, destinationFilePath + "-" + (i+1) + ".csv");
+    System.out.printf("Successfully Finished building Csv %d\n", i+1);
+    buildManifest(cvrs.size(), "TestCounty-" + (i+1), destinationFilePath + "-" + (i+1) + "-manifest.csv");
+    System.out.printf("Successfully Finished building manifest %d\n", i+1);
+    }
+
+    // System.out.println("Building .json for RAIRE service");
+    // writeJsonForRaireService(timeAllowed, cvrs, electionData, destinationFilePath+"-raire-service.json", DEFAULT_TIME_ALLOWED);
+    // System.out.println("Successfully Finished building json for RAIRE service.");
   }
 
 

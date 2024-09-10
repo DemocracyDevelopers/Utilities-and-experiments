@@ -4,7 +4,6 @@ import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.escapeCha
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.findFiles;
 import static au.org.democracydevelopers.utils.StvReadingFunctionUtils.getSanitisedVotesCount;
 import static java.lang.System.exit;
-import static java.lang.System.out;
 
 import au.org.democracydevelopers.utils.domain.stv.Candidate;
 import au.org.democracydevelopers.utils.domain.stv.ElectionData;
@@ -18,13 +17,13 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FilenameUtils;
 
 /**
  * This utility class will take STV files as a command line input and translate them into a series of SQL
  * INSERT commands to produce the right database for colorado-rla and raire-service tests.
+ * You can get the .stv files from vote.andrewconway.org. Change the file suffix from .stv to .json.
  * One example vote should look like:
  * INSERT INTO public.cast_vote_record (id, audit_board_index, comment, cvr_id, ballot_type, batch_id, county_id,
  *     cvr_number, imprinted_id, record_id, record_type, scanner_id, sequence_number, timestamp, version,
@@ -35,12 +34,13 @@ import org.apache.commons.io.FilenameUtils;
  *     VALUES (3829000, 1, '["MCCARTHY Steve","JOHNSON Jeff","WILLIAMS Keith"]', null, null, 3828998, 0, null);
  * In colorado-rla, each CVR can have multiple contests, and there should be one cvr_contest_info for each.
  * Currently, this utility assumes only one contest per CVR, so the 'index' for every cvr_contest_info is zero.
- * There are two modes. In either case, the first argument is a comment.
- * If both an input and output file are specified on the command line, a single output file is created (for a single contest)
- * If one input is specified on the command line, it is taken to be a directory. We iterate over all
- * the .json files in the directory, translating them into SQL, with an incrementing county-and-contest ID.
- * This ensures that all the sql files produced can be read into a database without ID clashes, assuming that
- * the number of votes per contest does not exceed MAX_VOTES_PER_ELECTION.
+ * There are two modes. In all cases, the first argument is a comment.
+ * * 3 arguments: If both an input and output file are specified on the command line, a single output file is created
+ *                (for a single contest)
+ * * 2 arguments: If one input is specified on the command line, it is taken to be a directory. We iterate over all
+ *                the .json files in the directory, translating them into SQL, with an incrementing county-and-contest ID.
+ *                This ensures that all the sql files produced can be read into a database without ID clashes, assuming
+ *                that the number of votes per contest does not exceed MAX_VOTES_PER_ELECTION.
  * Note there is NO EFFORT AT PROPER SQL ESCAPING so please don't use this for anything other than
  * generating test data from trustworthy sources.
  */
@@ -57,7 +57,7 @@ public class StvToSqlTranslatorUtil {
   private static final int MAX_VOTES_PER_ELECTION = 1000000;
 
   private static final String usage = "Usage: mvn clean compile exec:java -Dexec.mainClass=\"au.org.democracydevelopers.utils.StvTosqlTranslatorUtil\" -Dexec.args=\"commentForFiles sourceFile.json destinationFile \"\n"+
-   "Alternative arguments for whole-directory run: -Dexec.args=\"commentForFiles sourceDirectory \"";
+   "Alternative arguments for whole-directory run: -Dexec.args=\"commentForFiles sourceDirectory.\"";
 
   private final static String CAST_VOTE_RECORD_INSERT =
       "INSERT INTO cast_vote_record (id, audit_board_index, comment, cvr_id, ballot_type, "+

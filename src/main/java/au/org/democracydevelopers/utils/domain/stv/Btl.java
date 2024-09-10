@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Btl {
   @JsonProperty("n")
-  private int count;
+  public int count;
   @JsonProperty("candidates")
-  private List<Integer> preferences;
+  public List<Integer> preferences;
 }
